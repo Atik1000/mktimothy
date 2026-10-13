@@ -1,0 +1,1266 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                      String                  @id @default(cuid())
+  email                   String                  @unique
+  phone                   String?                 @unique
+  firstName               String
+  lastName                String
+  password                String
+  avatar                  String?
+  bio                     String?
+  location                String?
+  website                 String?
+  socialLinks             Json?
+  emailVerified           Boolean                 @default(false)
+  phoneVerified           Boolean                 @default(false)
+  isActive                Boolean                 @default(true)
+  role                    UserRole                @default(USER)
+  department              Department? // Department for moderators
+  subAdminPermissions     String[]                @default([]) // Sub-admin granular permissions
+  approvalStatus          ApprovalStatus          @default(PENDING)
+  approvedAt              DateTime?
+  approvedBy              String?
+  assignedModeratorId     String? // New field for moderator assignment
+  createdAt               DateTime                @default(now())
+  updatedAt               DateTime                @updatedAt
+  lastLoginAt             DateTime?
+  address                 String?
+  allowMessages           Boolean                 @default(true)
+  city                    String?
+  company                 String?
+  country                 String?
+  isProfilePublic         Boolean                 @default(true)
+  isVerified              Boolean                 @default(false)
+  // True once the user has completed the post-signup onboarding screen.
+  // Defaults to true so existing users + manual signups are unaffected;
+  // Google-created users get it set to false to trigger onboarding.
+  onboardingComplete      Boolean                 @default(true)
+  jobTitle                String?
+  languages               String[]
+  showEmail               Boolean                 @default(false)
+  showLocation            Boolean                 @default(true)
+  showPhone               Boolean                 @default(false)
+  skills                  String[]
+  verificationBadge       String?
+  verificationDate        DateTime?
+  zipCode                 String?
+  businessType            String?
+  workingDays             String?
+  isWorking               Boolean                 @default(false)
+  activityLogs            ActivityLog[]
+  blogLikes               BlogLike[]
+  blogs                   Blog[]
+  verificationReviews     BusinessVerification[]
+  chatMessages            ChatMessage[]
+  comments                Comment[]
+  files                   File[]
+  listingLikes            ListingLike[]
+  listings                Listing[]
+  notificationPreferences NotificationPreference?
+  otpCodes                OtpCode[]
+  reviews                 Review[]
+  savedBlogs              SavedBlog[]
+  savedListings           SavedListing[]
+  searchQueries           SearchQuery[]
+  sessions                Session[]
+  subscription            Subscription?
+  assignedTickets         SupportTicket[]         @relation("AssignedTickets")
+  supportTickets          SupportTicket[]         @relation("UserTickets")
+  ticketMessages          TicketMessage[]
+  // Internal chat & calls
+  chatRoomsStarted        ChatRoom[]              @relation("ChatRoomStarter")
+  callSchedulesCaller     CallSchedule[]          @relation("CallSchedulesCaller")
+  callSchedulesCallee     CallSchedule[]          @relation("CallSchedulesCallee")
+  callSchedulesApprover   CallSchedule[]          @relation("CallSchedulesApprover")
+  callSchedulesCanceller  CallSchedule[]          @relation("CallSchedulesCanceller")
+  callSessionsEndedBy     CallSession[]           @relation("CallSessionsEndedBy")
+  callSignals             CallSignal[]
+  callRecordings          CallRecording[]
+  callPolicyUpdatedBy     CallPolicy[]            @relation("CallPolicyUpdater")
+  // Moderator assignment relationships
+  assignedModerator       User?                   @relation("ModeratorAssignments", fields: [assignedModeratorId], references: [id])
+  assignedUsers           User[]                  @relation("ModeratorAssignments")
+  pitchIdea               PitchIdea?
+  investorProfile         InvestorProfile?
+  blocking                BlockedUser[]           @relation("BlockingUsers")
+  blockedBy               BlockedUser[]           @relation("BlockedUsers")
+  chatRoomFavorites       ChatRoomFavorite[]      @relation("ChatRoomFavorites")
+
+  @@map("users")
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model OtpCode {
+  id        String   @id @default(cuid())
+  userId    String
+  code      String
+  type      OtpType
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("otp_codes")
+}
+
+model Sector {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  icon        String?
+  description String?
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  listings    Listing[]
+
+  @@map("sectors")
+}
+
+model Category {
+  id              String    @id @default(cuid())
+  name            String    @unique
+  slug            String    @unique
+  description     String?
+  image           String?
+  icon            String?
+  color           String?
+  tagColor        String?
+  isActive        Boolean   @default(true)
+  isFeatured      Boolean   @default(false)
+  sortOrder       Int       @default(0)
+  metaTitle       String?
+  metaDescription String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  blogs           Blog[]
+  filters         Filter[]
+  listings        Listing[]
+
+  @@map("categories")
+}
+
+model Listing {
+  id                String                @id @default(cuid())
+  title             String
+  slug              String                @unique
+  description       String
+  summary           String?               @db.VarChar(255)
+  content           String?
+  businessName      String?
+  businessType      String?
+  website           String?
+  email             String?
+  phone             String?
+  address           String?
+  city              String?
+  state             String?
+  country           String?
+  zipCode           String?
+  latitude          Float?
+  longitude         Float?
+  listingImages     ListingImage[]
+  videos            String[]
+  documents         String[]
+  meta              ListingMeta[]
+  price             Float?
+  askingPrice       Float?
+  priceOnRequest    Boolean               @default(false)
+  priceType         PriceType?
+  currency          String                @default("USD")
+  businessHours     Json?
+  status            ListingStatus         @default(DRAFT)
+  approvalStatus    ApprovalStatus        @default(PENDING)
+  approvedAt        DateTime?
+  approvedBy        String?
+  displayAuthorName String? // Override the displayed author name
+  isActive          Boolean               @default(true)
+  isFeatured        Boolean               @default(false)
+  isVerified        Boolean               @default(false)
+  metaTitle         String?
+  metaDescription   String?
+  keywords          String[]
+  viewCount         Int                   @default(0)
+  likeCount         Int                   @default(0)
+  shareCount        Int                   @default(0)
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+  publishedAt       DateTime?
+  userId            String
+  categoryId        String
+  sectorId          String
+  verification      BusinessVerification?
+  likes             ListingLike[]
+  category          Category              @relation(fields: [categoryId], references: [id])
+  sector            Sector                @relation(fields: [sectorId], references: [id])
+  user              User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviews           Review[]
+  savedBy           SavedListing[]
+
+  @@map("listings")
+}
+
+model ListingImage {
+  id         String   @id @default(cuid())
+  url        String
+  isFeatured Boolean  @default(false)
+  order      Int      @default(0)
+  listingId  String
+  listing    Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("listing_images")
+}
+
+model ListingMeta {
+  id        String   @id @default(cuid())
+  metaKey   String
+  metaValue String
+  listingId String
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([listingId, metaKey])
+  @@map("listing_meta")
+}
+
+model ListingLike {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  createdAt DateTime @default(now())
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@map("listing_likes")
+}
+
+model SavedListing {
+  id        String   @id @default(cuid())
+  userId    String
+  listingId String
+  createdAt DateTime @default(now())
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@map("saved_listings")
+}
+
+model Review {
+  id             String         @id @default(cuid())
+  userId         String
+  listingId      String
+  rating         Int
+  title          String?
+  content        String
+  isActive       Boolean        @default(true)
+  approvalStatus ApprovalStatus @default(PENDING)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  listing        Listing        @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@map("reviews")
+}
+
+model Blog {
+  id                String         @id @default(cuid())
+  title             String
+  slug              String         @unique
+  excerpt           String?
+  content           String
+  coverImage        String?
+  metaTitle         String?
+  metaDescription   String?
+  keywords          String[]
+  status            BlogStatus     @default(DRAFT)
+  approvalStatus    ApprovalStatus @default(PENDING)
+  approvedAt        DateTime?
+  approvedBy        String?
+  displayAuthorName String? // Override the displayed author name
+  isActive          Boolean        @default(true)
+  isFeatured        Boolean        @default(false)
+  viewCount         Int            @default(0)
+  likeCount         Int            @default(0)
+  shareCount        Int            @default(0)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  publishedAt       DateTime?
+  authorId          String
+  categoryId        String
+  likes             BlogLike[]
+  tags              BlogTag[]
+  author            User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  category          Category       @relation(fields: [categoryId], references: [id])
+  comments          Comment[]
+  savedBy           SavedBlog[]
+
+  @@map("blogs")
+}
+
+model BlogLike {
+  id        String   @id @default(cuid())
+  userId    String
+  blogId    String
+  createdAt DateTime @default(now())
+  blog      Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, blogId])
+  @@map("blog_likes")
+}
+
+model SavedBlog {
+  id        String   @id @default(cuid())
+  userId    String
+  blogId    String
+  createdAt DateTime @default(now())
+  blog      Blog     @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, blogId])
+  @@map("saved_blogs")
+}
+
+model Comment {
+  id             String         @id @default(cuid())
+  content        String
+  rating         Int?           @default(0)
+  isActive       Boolean        @default(true)
+  approvalStatus ApprovalStatus @default(PENDING)
+  userId         String
+  blogId         String
+  parentId       String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  blog           Blog           @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parent         Comment?       @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies        Comment[]      @relation("CommentReplies")
+
+  @@map("comments")
+}
+
+model Tag {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  color     String?
+  createdAt DateTime  @default(now())
+  blogs     BlogTag[]
+
+  @@map("tags")
+}
+
+model BlogTag {
+  blogId String
+  tagId  String
+  blog   Blog   @relation(fields: [blogId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([blogId, tagId])
+  @@map("blog_tags")
+}
+
+model Filter {
+  id         String     @id @default(cuid())
+  name       String
+  slug       String     @unique
+  type       FilterType
+  options    Json
+  isActive   Boolean    @default(true)
+  sortOrder  Int        @default(0)
+  categoryId String?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  category   Category?  @relation(fields: [categoryId], references: [id])
+
+  @@map("filters")
+}
+
+model Page {
+  id              String   @id @default(cuid())
+  title           String
+  slug            String   @unique
+  content         String
+  type            PageType @default(STATIC)
+  isActive        Boolean  @default(true)
+  metaTitle       String?
+  metaDescription String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("pages")
+}
+
+model ChatMessage {
+  id         String        @id @default(cuid())
+  content    String
+  type       MessageType   @default(TEXT)
+  status     MessageStatus @default(SENT)
+  fileUrl    String?
+  fileName   String?
+  fileSize   Int?
+  senderId   String
+  roomId     String
+  readBy     Json?
+  deletedFor Json?
+  isEdited   Boolean       @default(false)
+  isDeletedForEveryone Boolean @default(false)
+  replyToId  String?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  room       ChatRoom      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  sender     User          @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  replyTo    ChatMessage?  @relation("MessageReplies", fields: [replyToId], references: [id])
+  replies    ChatMessage[] @relation("MessageReplies")
+
+  @@map("chat_messages")
+}
+
+model ChatRoom {
+  id                  String        @id @default(cuid())
+  name                String?
+  type                ChatType      @default(DIRECT)
+  isActive            Boolean       @default(true)
+  participants        Json
+  lastMessageAt       DateTime?
+  lastMessageContent  String?       @db.VarChar(500)
+  lastMessageSenderId String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  messages            ChatMessage[]
+  starter             User?         @relation("ChatRoomStarter", fields: [lastMessageSenderId], references: [id])
+  favorites           ChatRoomFavorite[] @relation("RoomFavorites")
+
+  @@map("chat_rooms")
+}
+
+model Notification {
+  id        String               @id @default(cuid())
+  title     String
+  message   String
+  type      NotificationType
+  priority  NotificationPriority @default(MEDIUM)
+  userId    String?
+  isGlobal  Boolean              @default(false)
+  isRead    Boolean              @default(false)
+  readAt    DateTime?
+  data      Json?
+  actionUrl String?
+  createdAt DateTime             @default(now())
+
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  emailNewsletter Boolean @default(true)
+  emailMarketing  Boolean @default(true)
+  emailSecurity   Boolean @default(true)
+  pushMarketing   Boolean @default(true)
+  pushSecurity    Boolean @default(true)
+  pushReminders   Boolean @default(true)
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
+}
+
+model Setting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  type      String   @default("string")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model Analytics {
+  id        String   @id @default(cuid())
+  event     String
+  data      Json?
+  userId    String?
+  sessionId String?
+  ipAddress String?
+  userAgent String?
+  page      String?
+  referrer  String?
+  timestamp DateTime @default(now())
+
+  @@map("analytics")
+}
+
+model File {
+  id           String   @id @default(cuid())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  path         String
+  url          String
+  alt          String?
+  caption      String?
+  userId       String?
+  createdAt    DateTime @default(now())
+  user         User?    @relation(fields: [userId], references: [id])
+
+  @@map("files")
+}
+
+model SearchQuery {
+  id        String   @id @default(cuid())
+  query     String
+  results   Int      @default(0)
+  userId    String?
+  ipAddress String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@map("search_queries")
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  action      String
+  description String?
+  data        Json?
+  userId      String?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id])
+
+  @@map("activity_logs")
+}
+
+model BusinessVerification {
+  id              String             @id @default(cuid())
+  listingId       String             @unique
+  status          VerificationStatus @default(PENDING)
+  type            VerificationType
+  documents       Json
+  submittedAt     DateTime           @default(now())
+  reviewedAt      DateTime?
+  reviewedBy      String?
+  approvedAt      DateTime?
+  rejectedAt      DateTime?
+  rejectionReason String?
+  badgeType       BadgeType?
+  badgeIssuedAt   DateTime?
+  badgeExpiresAt  DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  listing         Listing            @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reviewer        User?              @relation(fields: [reviewedBy], references: [id])
+
+  @@map("business_verifications")
+}
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String             @unique
+  plan                 SubscriptionPlan
+  status               SubscriptionStatus @default(ACTIVE)
+  billingInterval      BillingInterval    @default(MONTHLY)
+  amount               Float
+  currency             String             @default("USD")
+  startDate            DateTime           @default(now())
+  endDate              DateTime?
+  renewalDate          DateTime?
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  trialStartDate       DateTime?
+  trialEndDate         DateTime?
+  isTrialActive        Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  invoices             Invoice[]
+  user                 User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  subscriptionId  String
+  invoiceNumber   String        @unique
+  amount          Float
+  currency        String        @default("USD")
+  status          InvoiceStatus @default(PENDING)
+  periodStart     DateTime
+  periodEnd       DateTime
+  paidAt          DateTime?
+  paymentMethod   String?
+  stripeInvoiceId String?
+  items           Json
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  subscription    Subscription  @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@map("invoices")
+}
+
+model SupportTicket {
+  id           String          @id @default(cuid())
+  ticketNumber String          @unique
+  subject      String
+  description  String
+  category     TicketCategory
+  priority     TicketPriority  @default(MEDIUM)
+  status       TicketStatus    @default(OPEN)
+  userId       String
+  assignedTo   String?
+  resolvedAt   DateTime?
+  resolution   String?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+  assignee     User?           @relation("AssignedTickets", fields: [assignedTo], references: [id])
+  user         User            @relation("UserTickets", fields: [userId], references: [id], onDelete: Cascade)
+  messages     TicketMessage[]
+
+  @@map("support_tickets")
+}
+
+model TicketMessage {
+  id          String        @id @default(cuid())
+  ticketId    String
+  userId      String
+  content     String
+  isInternal  Boolean       @default(false)
+  attachments Json?
+  createdAt   DateTime      @default(now())
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ticket_messages")
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Internal calling system (audio/video, P2P, admin-monitored)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Singleton row (key = "global") holding the admin-configured window during
+/// which calls are allowed. Calls outside this window are rejected at request
+/// time and at session-start time.
+model CallPolicy {
+  id               String   @id @default(cuid())
+  key              String   @unique @default("global")
+  isEnabled        Boolean  @default(true)
+  allowedDays      String[] @default(["MON", "TUE", "WED", "THU", "FRI"])
+  allowedStartTime String   @default("09:00")
+  allowedEndTime   String   @default("17:00")
+  timezone         String   @default("UTC")
+  maxDurationMin   Int      @default(60)
+  updatedAt        DateTime @updatedAt
+  updatedById      String?
+  updatedBy        User?    @relation("CallPolicyUpdater", fields: [updatedById], references: [id])
+
+  @@map("call_policies")
+}
+
+/// A user's request to hold a call at a proposed time. Must be APPROVED by an
+/// admin before a CallSession can be started from it.
+model CallSchedule {
+  id              String             @id @default(cuid())
+  callerId        String
+  calleeId        String
+  callType        CallType           @default(AUDIO)
+  title           String?
+  notes           String?            @db.Text
+  startDateTime   DateTime
+  endDateTime     DateTime
+  status          CallScheduleStatus @default(PENDING)
+  approverId      String?
+  approvedAt      DateTime?
+  rejectionReason String?
+  cancelledAt     DateTime?
+  cancelledById   String?
+  completedAt     DateTime?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  caller          User               @relation("CallSchedulesCaller", fields: [callerId], references: [id], onDelete: Cascade)
+  callee          User               @relation("CallSchedulesCallee", fields: [calleeId], references: [id], onDelete: Cascade)
+  approver        User?              @relation("CallSchedulesApprover", fields: [approverId], references: [id])
+  cancelledBy     User?              @relation("CallSchedulesCanceller", fields: [cancelledById], references: [id])
+  sessions        CallSession[]
+
+  @@map("call_schedules")
+}
+
+/// A live (or finished) call instance. Created when a participant starts an
+/// approved schedule. The WebRTC signaling mailbox is CallSignal.
+model CallSession {
+  id           String            @id @default(cuid())
+  scheduleId   String
+  roomId       String
+  status       CallSessionStatus @default(RINGING)
+  participants Json
+  startedAt    DateTime          @default(now())
+  answeredAt   DateTime?
+  endedAt      DateTime?
+  durationSec  Int?
+  endedById    String?
+  endReason    CallEndReason?
+  createdAt    DateTime          @default(now())
+  schedule     CallSchedule      @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  endedBy      User?             @relation("CallSessionsEndedBy", fields: [endedById], references: [id])
+  signals      CallSignal[]
+  recordings   CallRecording[]
+
+  @@map("call_sessions")
+}
+
+/// Signaling mailbox: one row per offer/answer/ICE/renegotiate/end event.
+/// Polled via SSE by each peer; consumed rows are stamped with deliveredAt.
+model CallSignal {
+  id          String         @id @default(cuid())
+  sessionId   String
+  fromId      String
+  targetId    String?
+  type        CallSignalType
+  payload     Json
+  deliveredAt DateTime?
+  createdAt   DateTime       @default(now())
+  session     CallSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sender      User           @relation(fields: [fromId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, deliveredAt])
+  @@map("call_signals")
+}
+
+/// Audio-only recording of a call. Stored locally on the admin's machine and
+/// optionally mirrored to MinIO. Always audio (Opus/WebM) even for video calls.
+model CallRecording {
+  id            String      @id @default(cuid())
+  sessionId     String
+  recordedById  String
+  callType      String?     @default("AUDIO") // AUDIO | VIDEO (recording media type)
+  mimeType      String      @default("audio/webm")
+  durationSec   Int?
+  fileSize      Int?
+  storageKey    String?
+  storageUrl    String?
+  localFilename String?
+  createdAt     DateTime    @default(now())
+  session       CallSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  recordedBy    User        @relation(fields: [recordedById], references: [id], onDelete: Cascade)
+
+  @@map("call_recordings")
+}
+
+model BlockedUser {
+  id        String   @id @default(cuid())
+  blockerId String
+  blockedId String
+  createdAt DateTime @default(now())
+  blocker   User     @relation("BlockingUsers", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("BlockedUsers", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@map("blocked_users")
+}
+
+/// A chat room pinned/starred by a user ("Favorites" filter in the messages
+/// sidebar). One row per (user, room); toggling creates/deletes the row.
+model ChatRoomFavorite {
+  id        String    @id @default(cuid())
+  userId    String
+  roomId    String
+  createdAt DateTime  @default(now())
+  user      User      @relation("ChatRoomFavorites", fields: [userId], references: [id], onDelete: Cascade)
+  room      ChatRoom  @relation("RoomFavorites", fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, roomId])
+  @@map("chat_room_favorites")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  MODERATOR
+  INVESTOR
+}
+
+enum OtpType {
+  EMAIL_VERIFICATION
+  PHONE_VERIFICATION
+  PASSWORD_RESET
+  LOGIN_VERIFICATION
+}
+
+enum ListingStatus {
+  DRAFT
+  PUBLISHED
+  ACTIVE
+  SOLD
+  UNDER_OFFER
+  ARCHIVED
+  SUSPENDED
+}
+
+enum PriceType {
+  FIXED
+  HOURLY
+  MONTHLY
+  YEARLY
+  NEGOTIABLE
+  FREE
+  CONTACT_FOR_PRICE
+}
+
+enum BlogStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  SCHEDULED
+}
+
+enum FilterType {
+  SELECT
+  MULTISELECT
+  RANGE
+  CHECKBOX
+  RADIO
+  TEXT
+  DATE
+  LOCATION
+}
+
+enum PageType {
+  STATIC
+  PRIVACY_POLICY
+  TERMS_OF_SERVICE
+  ABOUT
+  CONTACT
+  FAQ
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+  LOCATION
+  STICKER
+  CONTACT
+  POLL
+}
+
+enum MessageStatus {
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum ChatType {
+  DIRECT
+  GROUP
+  SUPPORT
+}
+
+enum NotificationType {
+  SYSTEM
+  USER_ACTION
+  MARKETING
+  SECURITY
+  REMINDER
+}
+
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ConversationType {
+  USER_INITIATED
+  BUSINESS_INITIATED
+}
+
+enum ConversationStatus {
+  ACTIVE
+  EXPIRED
+  CLOSED
+}
+
+enum ConversationCategory {
+  MARKETING
+  UTILITY
+  AUTHENTICATION
+  SERVICE
+}
+
+enum MessageDirection {
+  INCOMING
+  OUTGOING
+}
+
+enum WhatsAppMessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+  STICKER
+  LOCATION
+  CONTACTS
+  INTERACTIVE
+  TEMPLATE
+  REACTION
+  SYSTEM
+}
+
+enum WhatsAppMessageStatus {
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  DELETED
+}
+
+enum WasenderMessageStatus {
+  ERROR // 0: The message failed to send due to an error
+  PENDING // 1: The message is queued and waiting to be sent
+  SENT // 2: The message has been sent from the server but not yet delivered
+  DELIVERED // 3: The message has reached the recipient's device
+  READ // 4: The recipient has opened and read the message
+  PLAYED // 5: The recipient has played the media message (e.g., audio or video)
+}
+
+enum InteractiveMessageType {
+  BUTTON
+  LIST
+  PRODUCT
+  PRODUCT_LIST
+  CATALOG
+  FLOW
+}
+
+enum WebhookType {
+  MESSAGE
+  MESSAGE_STATUS
+  ACCOUNT_UPDATE
+  PHONE_NUMBER_UPDATE
+  BUSINESS_CAPABILITY_UPDATE
+  MESSAGE_TEMPLATE_STATUS_UPDATE
+}
+
+enum WebhookStatus {
+  PENDING
+  PROCESSED
+  FAILED
+  RETRYING
+}
+
+enum FlowStatus {
+  DRAFT
+  PUBLISHED
+  DEPRECATED
+}
+
+enum FlowSessionStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+  EXPIRED
+}
+
+enum ProductAvailability {
+  IN_STOCK
+  OUT_OF_STOCK
+  PREORDER
+  AVAILABLE_FOR_ORDER
+  DISCONTINUED
+}
+
+enum ProductCondition {
+  NEW
+  REFURBISHED
+  USED_LIKE_NEW
+  USED_GOOD
+  USED_FAIR
+}
+
+enum AnalyticsPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum TemplateCategory {
+  MARKETING
+  UTILITY
+  AUTHENTICATION
+  CUSTOMER_SERVICE
+  PROMOTIONAL
+}
+
+enum TemplateType {
+  TEXT
+  MEDIA
+  INTERACTIVE
+  LOCATION
+  DOCUMENT
+  VIDEO
+  IMAGE
+}
+
+enum TemplateStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DISABLED
+  PAUSED
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  SENT
+  PAUSED
+  CANCELLED
+  COMPLETED
+  FAILED
+}
+
+enum TargetType {
+  ALL_CONTACTS
+  SELECTED_CONTACTS
+  TAGGED_CONTACTS
+  CATEGORY_CONTACTS
+  CUSTOM_FILTER
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+  STICKER
+}
+
+enum DeliveryStatus {
+  PENDING
+  SENT
+  DELIVERED
+  READ
+  FAILED
+  EXPIRED
+}
+
+enum VerificationStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum VerificationType {
+  BUSINESS_REGISTRATION
+  TAX_DOCUMENT
+  IDENTITY_VERIFICATION
+  ADDRESS_VERIFICATION
+  PHONE_VERIFICATION
+}
+
+enum BadgeType {
+  VERIFIED_BUSINESS
+  PREMIUM_PARTNER
+  TRUSTED_SELLER
+  OFFICIAL_ACCOUNT
+}
+
+enum SubscriptionPlan {
+  FREE
+  BASIC
+  PREMIUM
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  INACTIVE
+  CANCELLED
+  EXPIRED
+  PAST_DUE
+}
+
+enum BillingInterval {
+  MONTHLY
+  YEARLY
+  QUARTERLY
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+  REFUNDED
+}
+
+enum TicketCategory {
+  TECHNICAL_SUPPORT
+  BILLING
+  ACCOUNT_ISSUES
+  FEATURE_REQUEST
+  BUG_REPORT
+  GENERAL_INQUIRY
+  WHATSAPP_INTEGRATION
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_FOR_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum Department {
+  CUSTOMER_SUPPORT
+  CONTENT_MODERATION
+  BUSINESS_DEVELOPMENT
+  TECHNICAL_SUPPORT
+}
+
+// ── Internal calling system enums ────────────────────────────────────────────
+
+enum CallType {
+  AUDIO
+  VIDEO
+}
+
+enum CallScheduleStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum CallSessionStatus {
+  RINGING
+  ACTIVE
+  ENDED
+  FAILED
+  DECLINED
+}
+
+enum CallEndReason {
+  NORMAL
+  ADMIN_INTERRUPTED
+  TIMEOUT
+  PEER_HANGUP
+  FAILED
+}
+
+enum CallSignalType {
+  OFFER
+  ANSWER
+  ICE
+  RENEGOTIATE
+  END
+  MEDIA_STATE
+}
+
+model PitchIdea {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  businessStage String?
+  fundingStatus String?
+  investorType  String?
+  experience    String?
+  timeToFunding String?
+  industries    String?
+  businessModel String?
+  referenceCode String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("pitch_ideas")
+}
+
+model InvestorProfile {
+  id                       String   @id @default(cuid())
+  userId                   String   @unique
+  investorType             String?
+  investmentStage          String?
+  checkSize                String?
+  valueAdd                 String?
+  decisionSpeed            String?
+  trackRecord              String?
+  industries               String?
+  businessModel            String?
+  targetRegion             String?
+  revenueRange             String?
+  employeeCount            String?
+  postInvestmentEngagement String?
+  businessPlanStatus       String?
+  localPartnershipNeeds    String?
+  launchTimeline           String?
+  referenceCode            String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("investor_profiles")
+}
+
+model PreRegisterOtp {
+  id        String   @id @default(cuid())
+  phone     String
+  code      String
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@map("pre_register_otps")
+}
