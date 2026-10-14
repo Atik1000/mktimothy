@@ -4,7 +4,7 @@ import https from "node:https";
 
 // Server-side proxy to the WhatsApp chatbot backend. The API key never reaches
 // the browser. Env: CHATBOT_BASE_URL, CHATBOT_API_KEY, CHATBOT_API_KEY_HEADER.
-const BASE_URL = (process.env.CHATBOT_BASE_URL || "https://chatbot.manygym.com").replace(/\/$/, "");
+const BASE_URL = (process.env.CHATBOT_BASE_URL || "https://ai.mktimothy.com").replace(/\/$/, "");
 
 function upstreamHeaders(extra: Record<string, string> = {}) {
   const headers: Record<string, string> = { ...extra };
